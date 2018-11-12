@@ -23,6 +23,22 @@ class XmlPathSpec extends WordSpec {
         valid(List(true, false, false, false, true))
       )
     }
+
+    "select and read optional" in {
+      import cats.syntax.apply._
+      val reader = (
+        (__ \ "name").withDefault("John"),
+        (__ \ "age").withDefault(10)
+      ).mapN((x, y) => (x, y))
+
+      reader(
+        <user>
+          <name>Bart</name>
+        </user>
+      ) should be (
+        valid(("Bart", 10))
+      )
+    }
   }
 
 }
