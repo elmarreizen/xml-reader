@@ -1,4 +1,18 @@
 language: scala
+
 scala:
-   - 2.11.12
-   - 2.12.7
+  - 2.12.7
+
+script:
+  - sbt +compile +test
+
+cache:
+  directories:
+    - $HOME/.sbt/1.0/dependency
+    - $HOME/.sbt/boot/scala*
+    - $HOME/.sbt/launchers
+
+before_cache:
+  - find $HOME/.sbt -name "*.lock" -type f -delete
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
+  - rm -rf $HOME/.ivy2/local
