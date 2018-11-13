@@ -68,5 +68,33 @@ class ReaderSpec extends WordSpec {
         reader(<node>11</node>) should be (valid(true))
         reader(<node>5</node>) should be (valid(false))
       }
+
+     "`orElse` combinator" in {
+       import XmlPath.__
+
+       val reader: Reader[String] =
+         (__ \ "user" \ "name")[String]
+           .orElse((__ \ "name")[String])
+
+       reader(
+         <person>
+           <name>John</name>
+         </person>
+       ) shouldBe valid("John")
+
+       reader(
+         <person>
+           <user>
+             <name>Bill</name>
+           </user>
+         </person>
+       ) shouldBe valid("Bill")
+
+       reader(
+         <person>
+           <user>John</user>
+         </person>
+       ) shouldBe invalid("there must be one node containing Text node inside", XmlPath(List("name")))
+     }
     }
 }

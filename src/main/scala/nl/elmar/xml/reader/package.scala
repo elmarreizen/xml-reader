@@ -73,5 +73,11 @@ package object reader {
       case _ => invalid(s"attr $name is missing")
     }
   )
+
+  implicit class ReaderOps[A](val current: Reader[A]) extends AnyVal {
+    def orElse(another: Reader[A]): Reader[A] = Kleisli[Result, NodeSeq, A]((nodeSeq: NodeSeq) =>
+      current.run(nodeSeq).orElse(another.run(nodeSeq))
+    )
+  }
 }
 
