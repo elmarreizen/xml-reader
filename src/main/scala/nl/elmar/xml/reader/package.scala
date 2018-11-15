@@ -20,19 +20,19 @@ package object reader {
   def invalid(error: String, path: XmlPath = XmlPath.__): Result[Nothing] =
     Validated invalidNel ReaderError(path, error)
 
-  implicit val resultMonad = new FlatMap[Result] {
+  implicit val resultMonad: FlatMap[Result] = new FlatMap[Result] {
 
-    override def map[A, B](fa: Result[A])(f: (A) => B): Result[B] = fa match {
+    override def map[A, B](fa: Result[A])(f: A => B): Result[B] = fa match {
       case Validated.Valid(a) => Validated.Valid(f(a))
       case invalid@Validated.Invalid(_) => invalid
     }
 
-    override def flatMap[A, B](fa: Result[A])(f: (A) => Result[B]): Result[B] = fa match {
+    override def flatMap[A, B](fa: Result[A])(f: A => Result[B]): Result[B] = fa match {
       case Validated.Valid(a) => f(a)
       case Validated.Invalid(e) => Validated.invalid(e)
     }
 
-    override def tailRecM[A, B](a: A)(f: (A) => Result[Either[A, B]]): Result[B] = ???
+    override def tailRecM[A, B](a: A)(f: A => Result[Either[A, B]]): Result[B] = ???
   }
 
   implicit val stringReader: Reader[String] = Reader {
@@ -50,12 +50,19 @@ package object reader {
     string =>
       Exception.nonFatalCatch.either(string.toLong)
         .fold(
-          _ => invalid(s"'$string' cannot be interpeted as long"),
+          _ => invalid(s"'$string' cannot be interpreted as long"),
           valid
         )
   )
 
-  implicit val intReader: Reader[Int] = longReader.map(_.toInt)
+  implicit val intReader: Reader[Int] = stringReader.andThen(
+    string =>
+      Exception.nonFatalCatch.either(string.toInt)
+        .fold(
+          _ => invalid(s"'$string' cannot be interpreted as int"),
+          valid
+        )
+  )
 
   implicit val booleanReader: Reader[Boolean] = stringReader.flatMapF {
     case "true" => valid(true)
