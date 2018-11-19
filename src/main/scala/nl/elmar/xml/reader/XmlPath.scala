@@ -1,6 +1,7 @@
 package nl.elmar.xml.reader
 
-import cats.{ Show, Traverse}
+import cats.data.NonEmptyList
+import cats.{Show, Traverse}
 import cats.instances.list._
 
 case class XmlPath(path: List[String]) {
@@ -28,6 +29,11 @@ case class XmlPath(path: List[String]) {
 
   def first[A](implicit reader: Reader[A]): Reader[A] =
     optional[A].andThen(_ map valid getOrElse invalid(s"node not found", this))
+
+  def nel[A](implicit reader: Reader[A]): Reader[NonEmptyList[A]] = list[A].andThen { list =>
+    NonEmptyList.fromList(list)
+      .fold[Result[NonEmptyList[A]]](invalid("node cannot be empty", this))(valid)
+  }
 
   @inline def apply[A](implicit reader: Reader[A]): Reader[A] = read[A]
 }

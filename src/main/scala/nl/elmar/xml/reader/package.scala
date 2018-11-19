@@ -1,8 +1,9 @@
 package nl.elmar.xml
 
-import cats.FlatMap
+import cats.{FlatMap, Foldable}
 import cats.data.{Kleisli, Validated, ValidatedNel}
 
+import scala.language.higherKinds
 import scala.xml._
 import scala.util.control.Exception
 
@@ -84,6 +85,16 @@ package object reader {
   implicit class ReaderOps[A](val current: Reader[A]) extends AnyVal {
     def orElse(another: Reader[A]): Reader[A] = Kleisli[Result, NodeSeq, A]((nodeSeq: NodeSeq) =>
       current.run(nodeSeq).orElse(another.run(nodeSeq))
+    )
+  }
+
+  implicit class ReaderFoldableOps[A, F[_]: Foldable](val current: Reader[F[A]]) {
+    import cats.syntax.foldable._
+    import cats.syntax.flatMap._
+    def orEmpty(another: Reader[F[A]]): Reader[F[A]] = Kleisli[Result, NodeSeq, F[A]]((nodeSeq: NodeSeq) =>
+      current.run(nodeSeq)
+        .flatMap(result => if (result.isEmpty) another.run(nodeSeq) else valid(result))
+        .orElse(another.run(nodeSeq))
     )
   }
 }

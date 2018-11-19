@@ -1,5 +1,6 @@
 package nl.elmar.xml.reader
 
+import cats.data.NonEmptyList
 import org.scalatest.WordSpec
 import org.scalatest.Matchers._
 
@@ -96,5 +97,79 @@ class ReaderSpec extends WordSpec {
          </person>
        ) shouldBe invalid("there must be one node containing Text node inside", XmlPath(List("name")))
      }
-    }
+
+     "`orEmpty` combinator" in {
+       import XmlPath.__
+       import cats.instances.list._
+
+       val reader: Reader[List[String]] =
+         (__ \ "name").list[String].orEmpty((__ \ "item").list[String])
+
+       reader(
+         <items>
+           <item>1</item>
+           <item>2</item>
+           <item>3</item>
+         </items>
+       ) shouldBe valid(List("1", "2", "3"))
+
+       reader(
+         <items>
+           <name>John</name>
+           <name>Bill</name>
+         </items>
+       ) shouldBe valid(List("John", "Bill"))
+
+       reader(
+         <person>
+           <user>John</user>
+         </person>
+       ) shouldBe valid(List.empty)
+     }
+
+
+     "`nel` combinator" in {
+       import XmlPath.__
+
+       val reader: Reader[NonEmptyList[String]] = (__ \ "item").nel[String]
+
+       reader.run(
+         <items>
+           <item>1</item>
+           <item>2</item>
+           <item>3</item>
+         </items>
+       ) shouldBe valid(NonEmptyList.of("1", "2", "3"))
+
+       val reader2: Reader[NonEmptyList[String]] = (__ \ "persons" \ "person").nel[String]
+
+       reader2(
+         <global>
+           <persons>
+             <person>Bill</person>
+             <person>John</person>
+           </persons>
+         </global>
+       ) shouldBe valid(NonEmptyList.of("Bill", "John"))
+
+       reader.orElse(reader2)(
+         <global>
+           <persons>
+             <person>Bill</person>
+             <person>John</person>
+           </persons>
+         </global>
+       ) shouldBe valid(NonEmptyList.of("Bill", "John"))
+
+       reader.orElse(reader2)(
+           <items>
+             <item>1</item>
+             <item>2</item>
+             <item>3</item>
+           </items>
+       ) shouldBe valid(NonEmptyList.of("1", "2", "3"))
+
+       reader(<test></test>) shouldBe invalid("node cannot be empty", XmlPath(List("item")))
+     }
+   }
 }
